@@ -135,8 +135,6 @@ module wav_comp_nuopc
   use NUOPC_Model           , only : model_label_SetRunClock    => label_SetRunClock
   use NUOPC_Model           , only : model_label_Finalize       => label_Finalize
   use NUOPC_Model           , only : NUOPC_ModelGet
-  use wav_wrapper_mod       , only : t_startf, t_stopf, t_barrierf
-  use wav_wrapper_mod       , only : shr_file_getlogunit, shr_file_setlogunit
   use wav_kind_mod          , only : r8=>shr_kind_r8, i8=>shr_kind_i8, cl=>shr_kind_cl, cs=>shr_kind_cs
   use wav_import_export     , only : advertise_fields, realize_fields
   use wav_import_export     , only : state_getfldptr, state_fldchk
@@ -462,7 +460,6 @@ contains
     else
        stdout = 6
     endif
-    call shr_file_setLogUnit (stdout)
 #else
     stdout = 6
 #endif
@@ -678,11 +675,6 @@ contains
     !--------------------------------------------------------------------
     call realize_fields(gcomp, mesh=Emesh, flds_scalar_name=flds_scalar_name, flds_scalar_num=flds_scalar_num, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    !--------------------------------------------------------------------
-    ! end redirection of share output to wav log
-    !--------------------------------------------------------------------
-    call shr_file_setlogunit (shrlogunit)
 
     if (dbug_flag > 5) call ESMF_LogWrite(trim(subname)//' done', ESMF_LOGMSG_INFO)
 
@@ -912,12 +904,6 @@ contains
     if (dbug_flag  > 5) call ESMF_LogWrite(trim(subname)//' called', ESMF_LOGMSG_INFO)
 
     !------------
-    ! Reset shr logging to my log file
-    !------------
-    call shr_file_getLogUnit (shrlogunit)
-    call shr_file_setLogUnit (stdout)
-
-    !------------
     ! query the Component for its importState, exportState and clock
     !------------
     call ESMF_GridCompGet(gcomp, importState=importState, exportState=exportState, clock=clock, rc=rc)
@@ -1031,12 +1017,6 @@ contains
 
     call export_fields(gcomp, rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
-    !------------
-    ! Reset shr logging to original values
-    !------------
-
-    call shr_file_setLogUnit (shrlogunit)
 
     if (dbug_flag > 5) call ESMF_LogWrite(trim(subname)//' done', ESMF_LOGMSG_INFO)
 
@@ -1263,10 +1243,6 @@ contains
 
     rc = ESMF_SUCCESS
     if (dbug_flag > 5) call ESMF_LogWrite(trim(subname)//' called', ESMF_LOGMSG_INFO)
-
-    ! Redirect share output to wav log
-    call shr_file_getLogUnit (shrlogunit)
-    call shr_file_setLogUnit (stdout)
 
     ! Get component instance
     call NUOPC_CompAttributeGet(gcomp, name="inst_suffix", isPresent=isPresent, rc=rc)

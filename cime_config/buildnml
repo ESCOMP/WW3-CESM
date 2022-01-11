@@ -56,10 +56,10 @@ def _create_namelists(case, confdir, namelist_infile, nmlgen, data_list_path):
                'only day base period is supported for ww3 namelist generation')
     ncpl = case.get_value('WAV_NCPL')
     dtcpl = basedt / int(ncpl)
-    dtmax = int(float(nmlgen.get_default('dtmax')))
+    dtmax = int(float(nmlgen.get_value('dtmax')))
     if dtcpl%dtmax != 0:
         expect(False,
-               'dtcpl is not a multiple of dtmax')
+               'dtcpl {} is not a multiple of dtmax {}'.format(dtcpl,dtmax))
 
     # write diagnostic info
     logger.debug("ww3 initial conditions file is %s", nmlgen.get_value("initfile"))
