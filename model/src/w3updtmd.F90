@@ -32,17 +32,17 @@
 !/    06-Dec-2010 : Change from GLOBAL (logical) to ICLOSE (integer) to
 !/                  specify index closure for a grid.   ( version 3.14 )
 !/                  (T. J. Campbell, NRL)
-!/    05-Apr-2011 : Place holder for XGR in UNGTYPE     ( version 4.04 ) 
+!/    05-Apr-2011 : Place holder for XGR in UNGTYPE     ( version 4.04 )
 !/                  (A. Roland/F. Ardhuin)
 !/    13-Mar-2012 : Add initialization of UST on re-    ( version 4.07 )
 !/                  activation of grid point.
 !/    06-Jun-2012 : Porting bugfixes from 3.14 to 4.07  ( version 4.07 )
-!/    12-Jun-2012 : Add /RTD option or rotated grid option. 
+!/    12-Jun-2012 : Add /RTD option or rotated grid option.
 !/                  (Jian-Guo Li)                       ( version 4.07 )
 !/    26-Sep-2012 : Adding update from tidal analysis   ( version 4.08 )
 !/                  (F. Ardhuin)
 !/    16-Sep-2013 : Add Arctic part for SMC grid.       ( version 4.11 )
-!/    11-Nov-2013 : SMC and rotated grid incorporated in the main 
+!/    11-Nov-2013 : SMC and rotated grid incorporated in the main
 !/                  trunk                               ( version 4.13 )
 !/    13-Nov-2013 : Moved reflection from ww3_grid.ftn  ( version 4.13 )
 !/    27-May-2014 : Ading OMPG parallelizations dir,    ( version 5.02 )
@@ -61,7 +61,7 @@
 !/
 !/    Copyright 2009-2014 National Weather Service (NWS),
 !/       National Oceanic and Atmospheric Administration.  All rights
-!/       reserved.  WAVEWATCH III is a trademark of the NWS. 
+!/       reserved.  WAVEWATCH III is a trademark of the NWS.
 !/       No unauthorized use without permission.
 !/
 !  1. Purpose :
@@ -214,8 +214,8 @@
 !/ ------------------------------------------------------------------- /
       USE W3GDATMD, ONLY: NX, NY, NSEA, MAPSF
 #ifdef W3_SMC
-      USE W3GDATMD, ONLY: NARC, NGLO, ANGARC 
-      USE W3GDATMD, ONLY: FSWND, ARCTC 
+      USE W3GDATMD, ONLY: NARC, NGLO, ANGARC
+      USE W3GDATMD, ONLY: FSWND, ARCTC
 #endif
       USE W3WDATMD, ONLY: TIME
       USE W3ADATMD, ONLY: CX, CY, CA0, CAI, CD0, CDI
@@ -264,14 +264,19 @@
           DO ISEA=1, NSEA
 #ifdef W3_SMC
  !!Li  For sea-point SMC grid current, the 1-D current is stored on
- !!Li  2-D CX0(NSEA, 1) variable. 
+ !!Li  2-D CX0(NSEA, 1) variable.
         IF( FSWND ) THEN
-            IX = ISEA 
+            IX = ISEA
             IY = 1
         ELSE
 #endif
+#if defined(W3_UWM) || defined(CESMCOUPLED)
+            IX        = ISEA
+            IY        = 1
+#else
             IX        = MAPSF(ISEA,1)
             IY        = MAPSF(ISEA,2)
+#endif
 #ifdef W3_SMC
         ENDIF
 #endif
@@ -324,7 +329,7 @@
 #endif
 
 #ifdef W3_TIDE
-        IF (FLCURTIDE) THEN 
+        IF (FLCURTIDE) THEN
 !          WRITE(6,*) 'TIME CUR:',TIME, '##',TC0, '##',TCN
           TIDE_HOUR = TIME2HOURS(TIME)
 !
@@ -350,7 +355,7 @@
 !
       DO ISEA=1, NSEA
 #ifdef W3_TIDE
-        IF (FLCURTIDE) THEN  ! could move IF test outside of ISEA loop ... 
+        IF (FLCURTIDE) THEN  ! could move IF test outside of ISEA loop ...
 ! VUF should only be updated in latitude changes significantly ...
           IX        = MAPSF(ISEA,1)
           IY        = MAPSF(ISEA,2)
@@ -362,14 +367,14 @@
               TIDE_ARGX=(VX(J)+UX(J))*twpi-CXTIDE(IX,IY,J,2)*DERA
               TIDE_ARGY=(VX(J)+UX(J))*twpi-CYTIDE(IX,IY,J,2)*DERA
               WCURTIDEX = WCURTIDEX+FX(J)*CXTIDE(IX,IY,J,1)*COS(TIDE_ARGX)
-              WCURTIDEY = WCURTIDEY+FX(J)*CYTIDE(IX,IY,J,1)*COS(TIDE_ARGY)                    
+              WCURTIDEY = WCURTIDEY+FX(J)*CYTIDE(IX,IY,J,1)*COS(TIDE_ARGY)
               END DO
      
 #endif
 
 #ifdef W3_TIDET
- !Verification 
-         IF (ISEA.EQ.1) THEN 
+ !Verification
+         IF (ISEA.EQ.1) THEN
 
             TIDE_AMPC(1:NTIDE,1)=CXTIDE(IX,IY,1:NTIDE,1)
             TIDE_PHG(1:NTIDE,1 )=CXTIDE(IX,IY,1:NTIDE,2)
@@ -398,7 +403,7 @@
 #ifdef W3_TIDE
             CX(ISEA) = WCURTIDEX
             CY(ISEA) = WCURTIDEY
-          ELSE 
+          ELSE
 #endif
 
         CABS    = CA0(ISEA) + RD * CAI(ISEA)
@@ -421,7 +426,7 @@
         CY(ISEA) = CABS * SIN(CDIR)
 #ifdef W3_TIDE
   !        IF (ISEA.EQ.1)  WRITE(6,'(A,4F8.4,A,4F8.4)') 'CUR#:',RD,CA0(ISEA),CAI(ISEA),CABS,'##', &
-  !                                      CX(ISEA), CY(ISEA),WCURTIDEX, WCURTIDEY        
+  !                                      CX(ISEA), CY(ISEA),WCURTIDEX, WCURTIDEY
           END IF
 #endif
 !
@@ -538,7 +543,7 @@
       USE W3GDATMD, ONLY: ZWIND, OFSTAB, FFNG, FFPS, CCNG, CCPS, SHSTAB
 #endif
 #ifdef W3_SMC
-      USE W3GDATMD, ONLY: NARC, NGLO, ANGARC, ARCTC, FSWND 
+      USE W3GDATMD, ONLY: NARC, NGLO, ANGARC, ARCTC, FSWND
 #endif
       USE W3WDATMD, ONLY: TIME, ASF
       USE W3ADATMD, ONLY: DW, CX, CY, UA, UD, U10, U10D, AS,          &
@@ -583,12 +588,17 @@
  !!Li  For sea-point only SMC grid wind 1-D wind is stored on
  !!Li  2-D WX0(NSEA, 1) variable.
         IF( FSWND ) THEN
-            IX = ISEA 
+            IX = ISEA
             IY = 1
         ELSE
 #endif
+#if defined(W3_UWM) || defined(CESMCOUPLED)
+            IX        = ISEA
+            IY        = 1
+#else
             IX        = MAPSF(ISEA,1)
             IY        = MAPSF(ISEA,2)
+#endif
 #ifdef W3_SMC
         ENDIF
 #endif
@@ -839,8 +849,8 @@
 !/ ------------------------------------------------------------------- /
       USE W3GDATMD, ONLY: NSEA, MAPSF
 #ifdef W3_SMC
-      USE W3GDATMD, ONLY: NARC, NGLO, ANGARC 
-      USE W3GDATMD, ONLY: FSWND, ARCTC  
+      USE W3GDATMD, ONLY: NARC, NGLO, ANGARC
+      USE W3GDATMD, ONLY: FSWND, ARCTC
 #endif
       USE W3WDATMD, ONLY: TIME
       USE W3ADATMD, ONLY: TAUA, TAUADIR, MA0, MAI, MD0, MDI
@@ -880,12 +890,17 @@
  !!Li  For sea-point only SMC grid momentum 1-D momentum is stored on
  !!Li  2-D UX0(NSEA, 1) variable.
         IF( FSWND ) THEN
-            IX = ISEA 
+            IX = ISEA
             IY = 1
         ELSE
 #endif
+#if defined(W3_UWM) || defined(CESMCOUPLED)
+            IX        = ISEA
+            IY        = 1
+#else
             IX        = MAPSF(ISEA,1)
             IY        = MAPSF(ISEA,2)
+#endif
 #ifdef W3_SMC
         ENDIF
 #endif
@@ -1101,12 +1116,12 @@
       WRITE (NDST,9010)
 #endif
 !
-!  this is not clear what is going on betwen w3init and this ... 
+!  this is not clear what is going on betwen w3init and this ...
       A(:,:,:)=0
       DO JSEA=1, NSEAL
         CALL INIT_GET_ISEA(ISEA, JSEA)
-        IF (GTYPE.EQ.UNGTYPE) THEN 
-          XGR=1.  ! to be fixed later 
+        IF (GTYPE.EQ.UNGTYPE) THEN
+          XGR=1.  ! to be fixed later
         ELSE
           IX     = MAPSF(ISEA,1)
           IY     = MAPSF(ISEA,2)
@@ -1243,10 +1258,10 @@
 !/    15-Dec-2004 : Multiple grid version.              ( version 3.06 )
 !/    07-Sep-2005 : Moving update to end of time step.  ( version 3.08 )
 !/    17-Aug-2010 : Add initialization ABPI0-N(:,0).  ( version 3.14.5 )
-!/    12-Jun-2012 : Add /RTD option or rotated grid option. 
+!/    12-Jun-2012 : Add /RTD option or rotated grid option.
 !/                  (Jian-Guo Li)                       ( version 4.06 )
 !/    06-Jun-2018 : Add DEBUGIOBC/SETUP/DEBUGW3ULEV     ( version 6.04 )
-!/    13-Jun-2019 : Rotation only if POLAT<90 (C.Hansen)( version 7.11 ) 
+!/    13-Jun-2019 : Rotation only if POLAT<90 (C.Hansen)( version 7.11 )
 !/
 !  1. Purpose :
 !
@@ -1322,7 +1337,7 @@
       REAL                    :: HS1, HS2
 #endif
 #ifdef W3_RTD
- !!    Declare a temporary spectr variable.  JGLi12Jun2012 
+ !!    Declare a temporary spectr variable.  JGLi12Jun2012
        REAL :: Spectr(NSPEC), AnglBP
 #endif
 !/
@@ -1441,7 +1456,7 @@
 !/                  | Last update :         27-Aug-2015 |
 !/                  +-----------------------------------+
 !/
-!/    27-Aug-2015 : Creation                            ( version 5.10 )   
+!/    27-Aug-2015 : Creation                            ( version 5.10 )
 !/
 !  1. Purpose :
 !
@@ -1488,7 +1503,7 @@
 !
 ! 10. Source code :
 !
-!/ ------------------------------------------------------------------- /   
+!/ ------------------------------------------------------------------- /
       USE W3GDATMD, ONLY: NSEA, NSEA, MAPSF, IICEHMIN, IICEHFAC
       USE W3WDATMD, ONLY: TIME, TIC1, ICEH
       USE W3IDATMD, ONLY: TI1, ICEP1, FLIC1
@@ -1498,10 +1513,10 @@
 !/ ------------------------------------------------------------------- /
 !/ Parameter list
       LOGICAL, INTENT(IN)     :: FLFRST
-!/    
+!/
 !/ ------------------------------------------------------------------- /
 !/ Local variables
-!/      
+!/
       INTEGER                 :: IX, IY, ISEA
 !/
 !/
@@ -1518,8 +1533,13 @@
 
       DO ISEA=1, NSEA
 !
+#if defined(W3_UWM) || defined(CESMCOUPLED)
+        IX        = ISEA
+        IY        = 1
+#else
         IX        = MAPSF(ISEA,1)
         IY        = MAPSF(ISEA,2)
+#endif
         ICEH(ISEA) = MAX(IICEHMIN,IICEHFAC*ICEP1(IX,IY))
       END DO
 !
@@ -1533,7 +1553,7 @@
 !/ End of W3UIC1 ----------------------------------------------------- /
 !/
       END SUBROUTINE W3UIC1
-!/ ------------------------------------------------------------------- /  
+!/ ------------------------------------------------------------------- /
       SUBROUTINE W3UIC5( FLFRST )
 !/
 !/                  +-----------------------------------+
@@ -1543,8 +1563,8 @@
 !/                  | Last update :         13-Jan-2016 |
 !/                  +-----------------------------------+
 !/
-!/    27-Aug-2015 : Creation                            ( version 5.08 )   
-!/    13-Jan-2016 : Changed initial value of ICEDMAX    ( version 5.08 )   
+!/    27-Aug-2015 : Creation                            ( version 5.08 )
+!/    13-Jan-2016 : Changed initial value of ICEDMAX    ( version 5.08 )
 !/
 !  1. Purpose :
 !
@@ -1591,7 +1611,7 @@
 !
 ! 10. Source code :
 !
-!/ ------------------------------------------------------------------- /   
+!/ ------------------------------------------------------------------- /
       USE W3IDATMD, ONLY: TI5, ICEP5
       USE W3GDATMD, ONLY: NSEA, MAPSF
       USE W3WDATMD, ONLY: TIME, TIC5, ICE, ICEH, ICEF, ICEDMAX
@@ -1601,11 +1621,11 @@
 !/ ------------------------------------------------------------------- /
 !/ Parameter list
       LOGICAL, INTENT(IN)     :: FLFRST
-!/    
+!/
 !/
 !/ ------------------------------------------------------------------- /
 !/ Local variables
-!/      
+!/
       INTEGER                 :: IX, IY, ISEA
       LOGICAL                 :: FLFLOE
 !/
@@ -1621,17 +1641,22 @@
 
 ! 2.  Main loop over sea points -------------------------------------- *
 
-      DO ISEA=1, NSEA 
+      DO ISEA=1, NSEA
 !
+#if defined(W3_UWM) || defined(CESMCOUPLED)
+        IX        = ISEA
+        IY        = 1
+#else
         IX        = MAPSF(ISEA,1)
         IY        = MAPSF(ISEA,2)
+#endif
         FLFLOE = ICE(ISEA) .EQ. 0 .OR. ICEH(ISEA) .EQ. 0
-        IF ( FLFLOE) THEN          
+        IF ( FLFLOE) THEN
           ICEF(ISEA) = 0.0
           ICEDMAX(ISEA) = 1000.0
         ELSE
           ICEF(ISEA) = ICEP5(IX,IY)
-          ICEDMAX(ISEA) = ICEP5(IX,IY)          
+          ICEDMAX(ISEA) = ICEP5(IX,IY)
         END IF
       END DO
 !
@@ -1647,7 +1672,7 @@
 !/ End of W3UIC5 ----------------------------------------------------- /
 !/
       END SUBROUTINE W3UIC5
-!/ ------------------------------------------------------------------- /      
+!/ ------------------------------------------------------------------- /
       
       SUBROUTINE W3UICE ( VA )
 !/
@@ -1788,13 +1813,23 @@
 !
         IX        = MAPSF(ISEA,1)
         IY        = MAPSF(ISEA,2)
+#if defined(W3_UWM) || defined(CESMCOUPLED)
+        ICE(ISEA) = ICEI(ISEA,1)
+        BERG(ISEA)= BERGI(ISEA,1)
+#else
         ICE(ISEA) = ICEI(IX,IY)
         BERG(ISEA)= BERGI(IX,IY)
+#endif
 !
 ! 2.b Sea point to be de-activated..
 !
 #ifdef W3_IC0
+#if defined(W3_UWM) || defined(CESMCOUPLED)
+! assumes w3_t is not set
+        IF ( ICEI(ISEA,1).GE.FICEN .AND. MAPICE(IY,IX).EQ.0 ) THEN
+#else
         IF ( ICEI(IX,IY).GE.FICEN .AND. MAPICE(IY,IX).EQ.0 ) THEN
+#endif
             MAPSTA(IY,IX) = - ABS(MAPSTA(IY,IX))
             MAPICE(IY,IX) = 1
             CALL INIT_GET_JSEA_ISPROC(ISEA, JSEA, ISPROC)
@@ -1804,7 +1839,9 @@
                                   ICEI(IX,IY), 'ICE (NEW)'
 #endif
                 VA(:,JSEA) = 0.
+#if defined(W3_UWM) || defined(CESMCOUPLED)
                charn(jsea) = aalpha
+#endif
 #ifdef W3_T
             ELSE
                 WRITE (NDST,9021) ISEA, IX, IY, MAPSTA(IY,IX),     &
@@ -1821,7 +1858,12 @@
 !
 ! 2.b Ice point to be re-activated.
 !
+#if defined(W3_UWM) || defined(CESMCOUPLED)
+! assumes w3_t is not set
+        IF ( ICEI(ISEA,1).LT.FICEN .AND. MAPICE(IY,IX).EQ.1 ) THEN
+#else
         IF ( ICEI(IX,IY).LT.FICEN .AND. MAPICE(IY,IX).EQ.1 ) THEN
+#endif
 !
             MAPICE(IY,IX) = 0
             UST(ISEA)     = 0.05
@@ -1836,7 +1878,9 @@
                                       ICEI(IX,IY), 'SEA (NEW)'
 #endif
                     VA(:,JSEA) = 0.
+#if defined(W3_UWM) || defined(CESMCOUPLED)
                    charn(jsea) = aalpha
+#endif
 !
 #ifdef W3_T
                 ELSE
@@ -2093,7 +2137,7 @@
 ! 1.d Update water levels and save old
 !
 #ifdef W3_TIDE
-        IF (FLLEVTIDE) THEN 
+        IF (FLLEVTIDE) THEN
 !          WRITE(6,*) 'TIME:',TIME
           TIDE_HOUR = TIME2HOURS(TIME)
 !
@@ -2123,12 +2167,12 @@
         DWO(ISEA) = DW(ISEA)
 !
 #ifdef W3_TIDE
-        IF (FLLEVTIDE) THEN 
+        IF (FLLEVTIDE) THEN
 ! VUF should be updated only if latitude changes significantly ...
           CALL SETVUF_FAST(h,pp,s,p,enp,dh,dpp,ds,dp,dnp,tau,REAL(YGRD(IY,IX)),FX,UX,VX)
           WLEVTIDE = WLTIDE(IX,IY,1,1)
- !Verification 
- !          IF (ISEA.EQ.1) THEN 
+ !Verification
+ !          IF (ISEA.EQ.1) THEN
 
             TIDE_AMPC(1:NTIDE,1)=WLTIDE(IX,IY,1:NTIDE,1)
             TIDE_PHG(1:NTIDE,1)=WLTIDE(IX,IY,1:NTIDE,2)
@@ -2156,7 +2200,7 @@
    !         END IF
  ! End of verification
             WLV(ISEA) = WLEVTIDE
-          ELSE 
+          ELSE
 #endif
 !
         WLV(ISEA) = WLEV(IX,IY)
@@ -2167,7 +2211,7 @@
      END IF
 #endif
 #ifdef W3_TIDE
-          ENDIF 
+          ENDIF
 #endif
         DW (ISEA) = MAX ( 0. , WLVeff-ZB(ISEA) )
         END DO
@@ -2184,8 +2228,13 @@
 !
       DO ISEA=1, NSEA
 !
+#if defined(W3_UWM) || defined(CESMCOUPLED)
+        IX        = ISEA
+        IY        = 1
+#else
         IX     = MAPSF(ISEA,1)
         IY     = MAPSF(ISEA,2)
+#endif
 !
 ! 2.a Check if deep water
 !
@@ -2403,7 +2452,7 @@
            WRITE(740+IAPROC,*) 'Beginning of W3ULEV, step 8'
            FLUSH(740+IAPROC)
 #endif
-      IF (GTYPE.EQ.UNGTYPE) THEN 
+      IF (GTYPE.EQ.UNGTYPE) THEN
 #ifdef W3_DEBUGW3ULEV
            WRITE(740+IAPROC,*) 'Beginning of W3ULEV, step 9'
            FLUSH(740+IAPROC)
@@ -2414,10 +2463,10 @@
            FLUSH(740+IAPROC)
 #endif
 #ifdef W3_REF1
-      ELSE 
+      ELSE
         CALL W3SETREF
 #endif
-      ENDIF 
+      ENDIF
 #ifdef W3_DEBUGW3ULEV
            WRITE(740+IAPROC,*) 'Beginning of W3ULEV, step 11'
            FLUSH(740+IAPROC)
@@ -2558,12 +2607,17 @@
  !!Li  For sea-point only SMC grid air density is stored on
  !!Li  2-D RH0(NSEA, 1) variable.
         IF( FSWND ) THEN
-            IX = ISEA 
+            IX = ISEA
             IY = 1
         ELSE
 #endif
+#if defined(W3_UWM) || defined(CESMCOUPLED)
+            IX        = ISEA
+            IY        = 1
+#else
             IX        = MAPSF(ISEA,1)
             IY        = MAPSF(ISEA,2)
+#endif
 #ifdef W3_SMC
         ENDIF
 #endif
@@ -2645,7 +2699,7 @@
 !
 !  2. Method :
 !
-!     Two arrays are generated with the size (NY*NX,-1:1). The value 
+!     Two arrays are generated with the size (NY*NX,-1:1). The value
 !     at (IXY,-1) indicates the transparency to be used if the lower
 !     or left boundary is an inflow boundary. (IXY,1) is used if the
 !     upper or right boundary is an inflow boundary. (IXY,0) is used
@@ -2698,7 +2752,7 @@
 !/
 !/ ------------------------------------------------------------------- /
 !/ Parameter list
-!/    
+!/
       REAL, INTENT(IN)        :: TRNX(NY*NX), TRNY(NY*NX)
 !/
 !/ ------------------------------------------------------------------- /
@@ -2896,7 +2950,7 @@
               IF (FICEL.GT.0.) THEN
                 TRIX(IXY) = EXP(-ICE(ISEA)*DX/FICEL)
                 TRIY(IXY) = EXP(-ICE(ISEA)*DY/FICEL)
-              ELSE 
+              ELSE
 #endif
 ! Otherwise: original Tolman expression (Tolman 2003)
 #ifdef W3_IC0
@@ -2922,8 +2976,8 @@
 !
 #ifdef W3_IC0
               TRIX(IXY) = MAX ( 0. , MIN ( 1. , TRIX(IXY) ) )
-              TRIY(IXY) = MAX ( 0. , MIN ( 1. , TRIY(IXY) ) ) 
-              END IF          
+              TRIY(IXY) = MAX ( 0. , MIN ( 1. , TRIY(IXY) ) )
+              END IF
 #endif
 !
 !  Adding iceberg attenuation
@@ -3041,7 +3095,7 @@
 !       DZZDY   R.A.  O   Derivative in Y-direction (S-N).
 !       IXP: IX plus 1 (with branch cut incorporated)
 !       IYP, IXM, IYM: ditto
-!       IXPS: value to use for IXP if IXPS is not masked. 
+!       IXPS: value to use for IXP if IXPS is not masked.
 !             (use IX if masked)
 !       IYPS, IXMS, IYMS : ditto
 !       IXTRPL : in case of needing IY+1 for IY=NY, IX needs to be

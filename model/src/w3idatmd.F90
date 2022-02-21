@@ -21,7 +21,7 @@
 !/
 !/    Copyright 2009 National Weather Service (NWS),
 !/       National Oceanic and Atmospheric Administration.  All rights
-!/       reserved.  WAVEWATCH III is a trademark of the NWS. 
+!/       reserved.  WAVEWATCH III is a trademark of the NWS.
 !/       No unauthorized use without permission.
 !/
 !  1. Purpose :
@@ -86,7 +86,7 @@
 #endif
 !      FLTAUA    Log.  Public   Flag for atmospheric momentum input
 !      FLRHOA    Log.  Public   Flag for air density input
-!      INFLAGS1  L.A.  Public   Array consolidating the above six 
+!      INFLAGS1  L.A.  Public   Array consolidating the above six
 !                               flags, as well as four additional
 !                               data flags.
 !      INFLAGS2  L.A.  Public   Like INFLAGS1 but does *not* get changed
@@ -127,7 +127,7 @@
 !     - The number of grids is taken from W3GDATMD, and needs to be
 !       set first with W3DIMG.
 !
-!     - INFLAGS1 dimensioning is hardwired as INFLAGS1(-7:14) where lowest possible 
+!     - INFLAGS1 dimensioning is hardwired as INFLAGS1(-7:14) where lowest possible
 !       value of JFIRST is JFIRST=-7
 !
 !  6. Switches :
@@ -202,7 +202,7 @@
                                  TIN(:), TR0(:), TRN(:), T0N(:),      &
                                  T1N(:), T2N(:), TDN(:), TG0(:),      &
                                  TGN(:), TTN(:), TVN(:), TZN(:),      &
-                                 TI1(:), TI2(:), TI3(:), TI4(:), TI5(:) 
+                                 TI1(:), TI2(:), TI3(:), TI4(:), TI5(:)
       REAL, POINTER           :: GA0, GD0, GAN, GDN
       REAL, POINTER           :: WX0(:,:), WY0(:,:), DT0(:,:),        &
                                  WXN(:,:), WYN(:,:), DTN(:,:),        &
@@ -225,7 +225,7 @@
       LOGICAL, POINTER        :: FLLEV, FLCUR, FLWIND, FLICE, FLTAUA, &
                                  FLRHOA
       LOGICAL, POINTER        :: FLMTH, FLMVS, FLMDN
-      LOGICAL, POINTER        :: FLIC1, FLIC2, FLIC3, FLIC4, FLIC5 
+      LOGICAL, POINTER        :: FLIC1, FLIC2, FLIC3, FLIC4, FLIC5
 #ifdef W3_TIDE
       LOGICAL, POINTER        ::  FLLEVTIDE, FLCURTIDE,  &
                                   FLLEVRESI, FLCURRESI
@@ -417,7 +417,7 @@
 !     See module documentation.
 !
 !  5. Called by :
-!       
+!
 !     Main wave model drivers.
 !
 !  6. Error messages :
@@ -427,7 +427,7 @@
 !
 !  7. Remarks :
 !
-!     - W3SETI needs to be called after allocation to point to 
+!     - W3SETI needs to be called after allocation to point to
 !       proper allocated arrays.
 !
 !  8. Structure :
@@ -442,7 +442,7 @@
 ! 10. Source code :
 !
 !/ ------------------------------------------------------------------- /
-      USE W3GDATMD,  ONLY: NGRIDS, NAUXGR, IGRID, W3SETG, NX, NY
+      USE W3GDATMD,  ONLY: NGRIDS, NAUXGR, IGRID, W3SETG, NX, NY, NSEA
 #ifdef W3_SMC
       USE W3GDATMD,  ONLY: FSWND, NSEA
 #endif
@@ -462,7 +462,7 @@
 !/ ------------------------------------------------------------------- /
 !/ Local parameters
 !/
-      INTEGER                 :: JGRID
+      INTEGER                 :: JGRID, NXG, NYG
       LOGICAL                 :: FLAGSTIDE(4)=.FALSE.
 #ifdef W3_S
       INTEGER, SAVE           :: IENT = 0
@@ -500,6 +500,13 @@
 ! -------------------------------------------------------------------- /
 ! 2.  Allocate arrays
 !
+#if defined(W3_UWM) || defined(CESMCOUPLED)
+      NXG = NSEA
+      NYG = 1
+#else
+      NXG = NX
+      NYG = NY
+#endif
 #ifdef W3_TIDE
       IF ( PRESENT(FLAGSTIDEIN) ) THEN
           FLAGSTIDE(:) = FLAGSTIDEIN(:)
@@ -526,7 +533,7 @@
       FLLEVTIDE = FLAGSTIDE(1)
       FLCURTIDE = FLAGSTIDE(2)
       FLLEVRESI = FLAGSTIDE(3)
-      FLCURRESI = FLAGSTIDE(4)     
+      FLCURRESI = FLAGSTIDE(4)
 #endif
  
       FLWIND => INPUTS(IMOD)%INFLAGS1(3)
@@ -534,45 +541,45 @@
       FLTAUA => INPUTS(IMOD)%INFLAGS1(5)
       FLRHOA => INPUTS(IMOD)%INFLAGS1(6)
 !
-! notes: future improvement: flags for ICEPx should be 
+! notes: future improvement: flags for ICEPx should be
 !     "all or nothing" rather than 5 individual flags
 
       IF ( FLIC1  ) THEN
-          ALLOCATE ( INPUTS(IMOD)%ICEP1(NX,NY), STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%ICEP1(NXG,NYG), STAT=ISTAT )
           CHECK_ALLOC_STATUS ( ISTAT )
         END IF
       IF ( FLIC2  ) THEN
-          ALLOCATE ( INPUTS(IMOD)%ICEP2(NX,NY), STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%ICEP2(NXG,NYG), STAT=ISTAT )
           CHECK_ALLOC_STATUS ( ISTAT )
         END IF
       IF ( FLIC3  ) THEN
-          ALLOCATE ( INPUTS(IMOD)%ICEP3(NX,NY), STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%ICEP3(NXG,NYG), STAT=ISTAT )
           CHECK_ALLOC_STATUS ( ISTAT )
         END IF
       IF ( FLIC4  ) THEN
-          ALLOCATE ( INPUTS(IMOD)%ICEP4(NX,NY), STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%ICEP4(NXG,NYG), STAT=ISTAT )
           CHECK_ALLOC_STATUS ( ISTAT )
         END IF
       IF ( FLIC5  ) THEN
-          ALLOCATE ( INPUTS(IMOD)%ICEP5(NX,NY), STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%ICEP5(NXG,NYG), STAT=ISTAT )
           CHECK_ALLOC_STATUS ( ISTAT )
         END IF
 !
       IF ( FLMDN  ) THEN
-          ALLOCATE ( INPUTS(IMOD)%MUDD(NX,NY), STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%MUDD(NXG,NYG), STAT=ISTAT )
           CHECK_ALLOC_STATUS ( ISTAT )
         END IF
       IF ( FLMTH  ) THEN
-          ALLOCATE ( INPUTS(IMOD)%MUDT(NX,NY), STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%MUDT(NXG,NYG), STAT=ISTAT )
           CHECK_ALLOC_STATUS ( ISTAT )
         END IF
       IF ( FLMVS  ) THEN
-          ALLOCATE ( INPUTS(IMOD)%MUDV(NX,NY), STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%MUDV(NXG,NYG), STAT=ISTAT )
           CHECK_ALLOC_STATUS ( ISTAT )
         END IF
 !
       IF ( FLLEV  ) THEN
-          ALLOCATE ( INPUTS(IMOD)%WLEV(NX,NY), STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%WLEV(NXG,NYG), STAT=ISTAT )
           CHECK_ALLOC_STATUS ( ISTAT )
         END IF
 !
@@ -585,10 +592,10 @@
                      INPUTS(IMOD)%CYN(NSEA,1) , STAT=ISTAT )
        ELSE
 #endif
-          ALLOCATE ( INPUTS(IMOD)%CX0(NX,NY) ,              &
-                     INPUTS(IMOD)%CY0(NX,NY) ,              &
-                     INPUTS(IMOD)%CXN(NX,NY) ,              &
-                     INPUTS(IMOD)%CYN(NX,NY) , STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%CX0(NXG,NYG) ,              &
+                     INPUTS(IMOD)%CY0(NXG,NYG) ,              &
+                     INPUTS(IMOD)%CXN(NXG,NYG) ,              &
+                     INPUTS(IMOD)%CYN(NXG,NYG) , STAT=ISTAT )
 #ifdef W3_SMC
        ENDIF
 #endif
@@ -610,7 +617,7 @@
 !
 
 #ifdef W3_WRST
-      IF(.NOT.(INPUTS(IMOD)%WRSTIINIT)) THEN 
+      IF(.NOT.(INPUTS(IMOD)%WRSTIINIT)) THEN
         ALLOCATE (   INPUTS(IMOD)%WXNwrst(NX,NY) ,              &
                      INPUTS(IMOD)%WYNwrst(NX,NY) , STAT=ISTAT )
         INPUTS(IMOD)%WRSTIINIT=.TRUE.
@@ -628,12 +635,12 @@
                      INPUTS(IMOD)%DTN(NSEA,1) , STAT=ISTAT )
        ELSE
 #endif
-          ALLOCATE ( INPUTS(IMOD)%WX0(NX,NY) ,              &
-                     INPUTS(IMOD)%WY0(NX,NY) ,              &
-                     INPUTS(IMOD)%DT0(NX,NY) ,              &
-                     INPUTS(IMOD)%WXN(NX,NY) ,              &
-                     INPUTS(IMOD)%WYN(NX,NY) ,              &
-                     INPUTS(IMOD)%DTN(NX,NY) , STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%WX0(NXG,NYG) ,              &
+                     INPUTS(IMOD)%WY0(NXG,NYG) ,              &
+                     INPUTS(IMOD)%DT0(NXG,NYG) ,              &
+                     INPUTS(IMOD)%WXN(NXG,NYG) ,              &
+                     INPUTS(IMOD)%WYN(NXG,NYG) ,              &
+                     INPUTS(IMOD)%DTN(NXG,NYG) , STAT=ISTAT )
 #ifdef W3_SMC
        ENDIF
 #endif
@@ -643,8 +650,8 @@
         END IF
 !
       IF ( FLICE  ) THEN
-          ALLOCATE ( INPUTS(IMOD)%ICEI(NX,NY),              &
-                     INPUTS(IMOD)%BERGI(NX,NY), STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%ICEI(NXG,NYG),              &
+                     INPUTS(IMOD)%BERGI(NXG,NYG), STAT=ISTAT )
           CHECK_ALLOC_STATUS ( ISTAT )
           INPUTS(IMOD)%BERGI = 0.
         END IF
@@ -658,10 +665,10 @@
                      INPUTS(IMOD)%UYN(NSEA,1) , STAT=ISTAT )
        ELSE
 #endif
-          ALLOCATE ( INPUTS(IMOD)%UX0(NX,NY) ,              &
-                     INPUTS(IMOD)%UY0(NX,NY) ,              &
-                     INPUTS(IMOD)%UXN(NX,NY) ,              &
-                     INPUTS(IMOD)%UYN(NX,NY) , STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%UX0(NXG,NYG) ,              &
+                     INPUTS(IMOD)%UY0(NXG,NYG) ,              &
+                     INPUTS(IMOD)%UXN(NXG,NYG) ,              &
+                     INPUTS(IMOD)%UYN(NXG,NYG) , STAT=ISTAT )
 #ifdef W3_SMC
        ENDIF
 #endif
@@ -675,8 +682,8 @@
                      INPUTS(IMOD)%RHN(NSEA,1) , STAT=ISTAT )
        ELSE
 #endif
-          ALLOCATE ( INPUTS(IMOD)%RH0(NX,NY) ,              &
-                     INPUTS(IMOD)%RHN(NX,NY) , STAT=ISTAT )
+          ALLOCATE ( INPUTS(IMOD)%RH0(NXG,NYG) ,              &
+                     INPUTS(IMOD)%RHN(NXG,NYG) , STAT=ISTAT )
 #ifdef W3_SMC
        ENDIF
 #endif
@@ -684,7 +691,7 @@
         END IF
 !
 #ifdef CESMCOUPLED
-        ALLOCATE ( INPUTS(IMOD)%HML(NX,NY), STAT=ISTAT )
+        ALLOCATE ( INPUTS(IMOD)%HML(NXG,NYG), STAT=ISTAT )
         CHECK_ALLOC_STATUS ( ISTAT )
 #endif
 !
@@ -844,7 +851,7 @@
       IF ( NIDATA .EQ. -1 ) THEN
           WRITE (NDSE,1001)
           CALL EXTCDE (1)
-        END IF   
+        END IF
 !
       IF ( IMOD.LT.-NAUXGR .OR. IMOD.GT.NIDATA ) THEN
           WRITE (NDSE,1002) IMOD, -NAUXGR, NIDATA
@@ -965,10 +972,10 @@
               CYN    => INPUTS(IMOD)%CYN
             END IF
 #ifdef W3_TIDE
-          IF ( FLLEVTIDE ) THEN 
+          IF ( FLLEVTIDE ) THEN
               WLTIDE => INPUTS(IMOD)%WLTIDE
             END IF
-          IF ( FLCURTIDE ) THEN 
+          IF ( FLCURTIDE ) THEN
               CXTIDE => INPUTS(IMOD)%CXTIDE
               CYTIDE => INPUTS(IMOD)%CYTIDE
             END IF
