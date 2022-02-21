@@ -143,7 +143,8 @@ module wav_comp_nuopc
   use wmmdatmd              , only : mdse, mdst, nrgrd, improc, nmproc, wmsetm, stime, etime
   use wmmdatmd              , only : nmpscr
   use w3adatmd              , only : flcold, fliwnd
-  use wav_shr_mod           , only : multigrid
+  use wav_shr_mod           , only : casename, multigrid, inst_suffix, inst_index
+  use wav_shr_mod           , only : time_origin, calendar_name, elapsed_secs
 
   implicit none
   private ! except
@@ -168,6 +169,7 @@ module wav_comp_nuopc
   integer                 :: flds_scalar_index_ny = 0
   logical                 :: profile_memory = .false.
 
+  logical                 :: histwr_is_active = .false. ! native WW3 grd output
   logical                 :: root_task = .false.
 #ifdef CESMCOUPLED
   logical :: cesmcoupled = .true.
@@ -362,6 +364,24 @@ contains
     if (isPresent .and. isSet) multigrid=(trim(cvalue)=="true")
     write(logmsg,'(A,l)') trim(subname)//': Wave multigrid setting is ',multigrid
     call ESMF_LogWrite(trim(logmsg), ESMF_LOGMSG_INFO)
+    ! Get casename
+    call NUOPC_CompAttributeGet(gcomp, name="case_name", value=casename, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    write(logmsg,'(A)') trim(subname)//': Wave casename setting : '//trim(casename)
+    call ESMF_LogWrite(trim(logmsg), ESMF_LOGMSG_INFO)
+
+    ! Get component instance
+    call NUOPC_CompAttributeGet(gcomp, name="inst_suffix", isPresent=isPresent, rc=rc)
+    if (chkerr(rc,__LINE__,u_FILE_u)) return
+    if (isPresent) then
+       call NUOPC_CompAttributeGet(gcomp, name="inst_suffix", value=inst_suffix, rc=rc)
+       if (chkerr(rc,__LINE__,u_FILE_u)) return
+       cvalue = inst_suffix(2:)
+       read(cvalue, *) inst_index
+    else
+       inst_suffix = ""
+       inst_index=1
+    endif
     call advertise_fields(importState, exportState, flds_scalar_name, rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
@@ -397,6 +417,7 @@ contains
     type(ESMF_VM)                  :: vm
     type(ESMF_Time)                :: esmfTime, stopTime
     type(ESMF_TimeInterval)        :: TimeStep
+    type(ESMF_Calendar)            :: calendar
     character(CL)                  :: cvalue
     integer                        :: shrlogunit
     integer                        :: yy,mm,dd,hh,ss
@@ -427,6 +448,7 @@ contains
     integer                        :: iam, mpi_comm
     character(ESMF_MAXSTR)         :: msgString
     character(ESMF_MAXSTR)         :: diro
+    character(ESMF_MAXSTR)         :: timestring
     character(CL)                  :: logfile
     logical                        :: local
     integer                        :: imod, idsi, idso, idss, idst, idse
@@ -544,6 +566,16 @@ contains
        call ESMF_ClockGet( clock, currTime=esmfTime, rc=rc )
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
     endif
+    ! Determine time attributes for history output
+    call ESMF_TimeGet( esmfTime, timeString=time_origin, calendar=calendar, rc=rc )
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+    time_origin = 'seconds since '//time_origin(1:10)//' '//time_origin(12:19)
+    !call ESMF_ClockGet(clock, calendar=calendar)
+    if (calendar == ESMF_CALKIND_GREGORIAN) then
+       calendar_name = 'standard'
+    else if (calendar == ESMF_CALKIND_NOLEAP) then
+       calendar_name = 'noleap'
+    end if
     call ESMF_TimeGet( esmfTime, yy=yy, mm=mm, dd=dd, s=start_tod, rc=rc )
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     call ymd2date(yy, mm, dd, start_ymd)
@@ -858,7 +890,7 @@ contains
     type(ESMF_State)        :: exportState
     type(ESMF_Clock)        :: clock
     type(ESMF_Alarm)        :: alarm
-    type(ESMF_TimeInterval) :: timeStep
+    type(ESMF_TimeInterval) :: timeStep, elapsedTime
     type(ESMF_Time)         :: currTime, nextTime, startTime, stopTime
     integer                 :: yy,mm,dd,hh,ss
     integer                 :: imod
@@ -913,6 +945,10 @@ contains
     call ESMF_TimeGet( nextTime, yy=yy, mm=mm, dd=dd, s=tod, rc=rc )
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
+    elapsedTime = nextTime - startTime
+    call ESMF_TimeIntervalGet(elapsedTime, s_i8=elapsed_secs,rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
     call ymd2date(yy, mm, dd, ymd)
     hh = tod/3600
     mm = (tod - (hh * 3600))/60
@@ -952,18 +988,24 @@ contains
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
        else
           rstwr = .false.
-       endif
+       end if
+    else
+       rstwr = .false.
+    end if
 
-       ! Determine if time to write cesm ww3 history files
-       ! histwr is set in wav_shr_mod and used in w3wavmd to determine if restart should be written
-       histwr = .false.
-       if (outfreq .gt. 0) then
-          ! output every outfreq hours if appropriate
-          if( mod(hh, outfreq) == 0 ) then
-             histwr = .true.
-          endif
+    !TODO: what is outfreq used for if an alarm is created with history_n,history_option?
+    ! Determine if time to write ww3 history files
+    ! histwr is set in wav_shr_mod and used in w3wavmd to determine if history should be written
+    ! if history alarms are not active, control of WW3 grd output remains with WW3
+    histwr = .false.
+    if (outfreq .gt. 0) then
+       ! output every outfreq hours if appropriate
+       if( mod(hh, outfreq) == 0 ) then
+          histwr = .true.
        endif
-       if (.not. histwr) then
+    end if
+    if (.not. histwr) then
+       if (histwr_is_active) then
           call ESMF_ClockGetAlarm(clock, alarmname='alarm_history', alarm=alarm, rc=rc)
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
           if (ESMF_AlarmIsRinging(alarm, rc=rc)) then
@@ -973,12 +1015,12 @@ contains
              if (ChkErr(rc,__LINE__,u_FILE_u)) return
           else
              histwr = .false.
-          endif
+          end if
        end if
-       if ( root_task ) then
-          !  write(nds(1),*) 'wav_comp_nuopc time', time, timen
-          !  write(nds(1),*) 'ww3 hist flag ', histwr, outfreq, hh, mod(hh, outfreq)
-       end if
+    end if
+    if ( root_task ) then
+       !  write(nds(1),*) 'wav_comp_nuopc time', time, timen
+       !  write(nds(1),*) 'ww3 hist flag ', histwr, outfreq, hh, mod(hh, outfreq)
     end if
 
     ! Advance the wave model
@@ -1014,6 +1056,8 @@ contains
     type(ESMF_Time)          :: mstoptime
     type(ESMF_Time)          :: mstarttime
     type(ESMF_TimeInterval)  :: mtimestep, dtimestep
+    logical                  :: isPresent
+    logical                  :: isSet
     character(len=256)       :: cvalue
     character(len=256)       :: restart_option ! Restart option units
     integer                  :: restart_n      ! Number until restart interval
@@ -1118,11 +1162,13 @@ contains
        call ESMF_AlarmSet(stop_alarm, clock=mclock, rc=rc)
        if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
-       if (cesmcoupled) then
-          !----------------
-          ! History alarm
-          !----------------
-          call NUOPC_CompAttributeGet(gcomp, name="history_option", value=history_option, rc=rc)
+       !----------------
+       ! History alarm
+       !----------------
+       call NUOPC_CompAttributeGet(gcomp, name="history_option", isPresent=isPresent, isSet=isSet, rc=rc)
+       if (ChkErr(rc,__LINE__,u_FILE_u)) return
+       if (isPresent .and. isSet) then
+          call NUOPC_CompAttributeGet(gcomp, name='history_option', value=history_option, rc=rc)
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
           call NUOPC_CompAttributeGet(gcomp, name="history_n", value=cvalue, rc=rc)
@@ -1141,6 +1187,12 @@ contains
 
           call ESMF_AlarmSet(history_alarm, clock=mclock, rc=rc)
           if (ChkErr(rc,__LINE__,u_FILE_u)) return
+          histwr_is_active = .true.
+       else
+          ! If attribute is not present - write history native WW3 output if requested
+          history_option = 'none'
+          history_n = -999
+          histwr_is_active = .false.
        end if
 
     end if
@@ -1222,24 +1274,7 @@ contains
     rc = ESMF_SUCCESS
     if (dbug_flag > 5) call ESMF_LogWrite(trim(subname)//' called', ESMF_LOGMSG_INFO)
 
-    ! Get component instance
-    call NUOPC_CompAttributeGet(gcomp, name="inst_suffix", isPresent=isPresent, rc=rc)
-    if (chkerr(rc,__LINE__,u_FILE_u)) return
-    if (isPresent) then
-       call NUOPC_CompAttributeGet(gcomp, name="inst_suffix", value=inst_suffix, rc=rc)
-       if (chkerr(rc,__LINE__,u_FILE_u)) return
-       cvalue = inst_suffix(2:)
-       read(cvalue, *) inst_index
-    else
-       inst_suffix = ""
-       inst_index=1
-    endif
     inst_name = "WAV"//trim(inst_suffix)
-
-    ! Set casename (in wav_shr_mod)
-    call NUOPC_CompAttributeGet(gcomp, name="case_name", value=casename, rc=rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
-
     ! Read namelist (set initfile in wav_shr_mod)
     if ( root_task ) then
        open (newunit=unitn, file='wav_in'//trim(inst_suffix), status='old')
@@ -1313,6 +1348,7 @@ contains
 
     use w3odatmd     , only : fnmpre
     use w3initmd     , only : w3init
+    use wav_shr_mod  , only : outfreq
     use wav_shel_inp , only : read_shel_inp
     use wav_shel_inp , only : npts, odat, iprt, x, y, pnames, prtfrm
     use wav_shel_inp , only : flgrd, flgd, flgr2, flg2
@@ -1331,6 +1367,7 @@ contains
     rc = ESMF_SUCCESS
     if (dbug_flag > 5) call ESMF_LogWrite(trim(subname)//' called', ESMF_LOGMSG_INFO)
 
+    outfreq = 0
     fnmpre = './'
 
     call ESMF_LogWrite(trim(subname)//' call read_shel_inp', ESMF_LOGMSG_INFO)
