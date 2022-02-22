@@ -1017,10 +1017,10 @@ contains
              histwr = .false.
           end if
        end if
-    end if
-    if ( root_task ) then
-       !  write(nds(1),*) 'wav_comp_nuopc time', time, timen
-       !  write(nds(1),*) 'ww3 hist flag ', histwr, outfreq, hh, mod(hh, outfreq)
+       if ( root_task ) then
+          !  write(nds(1),*) 'wav_comp_nuopc time', time, timen
+          !  write(nds(1),*) 'ww3 hist flag ', histwr, outfreq, hh, mod(hh, outfreq)
+       end if
     end if
 
     ! Advance the wave model

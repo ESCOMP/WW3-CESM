@@ -2968,8 +2968,11 @@
           ! so this is getting called every hour
           ! seems like it only needs to be done when histwr=T though
           ! so am chaning
-     IF (  histwr .and.  &
-          (FLOUT(1) .OR.  FLOUT(7)) ) THEN
+     IF (  (histwr .and.  (FLOUT(1) .OR.  FLOUT(7)) ) .OR. &
+           (  .not. histwr .and. &
+             ( ( (DSEC21(TIME,TONEXT(:,1)).EQ.0.) .AND. FLOUT(1) ) .OR. &
+             (    (DSEC21(TIME,TONEXT(:,7)).EQ.0.) .AND. FLOUT(7) .AND. &
+                  SBSED ) ) ) ) THEN
 #else
      IF ( ( (DSEC21(TIME,TONEXT(:,1)).EQ.0.) .AND. FLOUT(1) ) .OR. &
           (  (DSEC21(TIME,TONEXT(:,7)).EQ.0.) .AND. FLOUT(7) .AND. &
@@ -3206,16 +3209,22 @@
                   IF ( DTTST .EQ. 0. ) THEN
 #if defined(W3_UWM) || defined(CESMCOUPLED)
                       ! This assumes that W3_SBS is not defined
-                      IF ( ( J .EQ. 1 ) .AND. histwr) THEN
-                          CALL MPI_WAITALL( NRQGO, IRQGO, STATIO, IERR_MPI )
-                          FLGMPI(0) = .FALSE.
+                      IF ( ( J .EQ. 1 ) ) THEN
+                          if ( histwr ) then
+                             CALL MPI_WAITALL( NRQGO, IRQGO, STATIO, IERR_MPI )
+                             FLGMPI(0) = .FALSE.
+                          end if
                           write(*,*) 'CESM w3wavemd: hist flag 1', j, histwr, time, IERR_MPI
                           IF ( IAPROC .EQ. NAPFLD ) THEN
                               IF ( FLGMPI(1) ) CALL MPI_WAITALL  &
                                  ( NRQGO2, IRQGO2, STATIO, IERR_MPI )
                               FLGMPI(1) = .FALSE.
                               write(*,*) 'CESM w3wavemd: hist flag 2', j, histwr, time, IERR_MPI
-                              CALL W3IOGONCD ()
+                              if ( histwr ) then
+                                 CALL W3IOGONCD ()
+                              else
+                                 CALL W3IOGO( 'WRITE', NDS(7), ITEST, IMOD )
+                              end if
                           END IF
 #else
                       IF ( ( J .EQ. 1 )              &
