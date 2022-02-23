@@ -2162,8 +2162,13 @@
            FLUSH(740+IAPROC)
 #endif
       DO ISEA=1, NSEA
+#if defined(W3_UWM) || defined(CESMCOUPLED)
+        IX     = ISEA
+        IY     = 1
+#else
         IX     = MAPSF(ISEA,1)
         IY     = MAPSF(ISEA,2)
+#endif
         DWO(ISEA) = DW(ISEA)
 !
 #ifdef W3_TIDE
