@@ -1868,7 +1868,9 @@
       IROOT  = NAPRST - 1
 !
       IF ( FLOUT(4) ) THEN
+#ifdef DEBUG
       write(6,*)'1 IMOD, NAPROC, NBLKRS, NSPEC, RSBLKS=',IMOD, NAPROC, NBLKRS, NSPEC, RSBLKS
+#endif
           ALLOCATE ( OUTPTS(IMOD)%OUT4%IRQRS(2*NSPEC) )
           IRQRS  => OUTPTS(IMOD)%OUT4%IRQRS
 !
@@ -1932,7 +1934,9 @@
               IH     = 0
 !
               IF ( IAPROC .NE. NAPRST ) THEN
+#ifdef DEBUG
               write(6,*)'2 IMOD, NAPROC, NBLKRS, NSPEC, RSBLKS=',IMOD, NAPROC, NBLKRS, NSPEC, RSBLKS
+#endif
 !
                   ALLOCATE ( OUTPTS(IMOD)%OUT4%IRQRSS(NBLKRS) )
                   IRQRSS => OUTPTS(IMOD)%OUT4%IRQRSS
@@ -1949,7 +1953,9 @@
                     END DO
 !
                 ELSE
+#ifdef DEBUG
                   write(6,*)'3 IMOD, NAPROC, NBLKRS, NSPEC, RSBLKS=',IMOD, NAPROC, NBLKRS, NSPEC, RSBLKS
+#endif
 !
                   ALLOCATE                                       &
                  ( OUTPTS(IMOD)%OUT4%IRQRSS(NAPROC*NBLKRS) ,     &

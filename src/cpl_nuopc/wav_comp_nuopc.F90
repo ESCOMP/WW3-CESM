@@ -529,19 +529,18 @@ contains
     call NUOPC_CompAttributeGet(gcomp, name='start_type', value=cvalue, rc=rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
     read(cvalue,*) starttype
-
     if (     trim(starttype) == trim('startup')) then
        runtype = "initial"
-       write(ndso,*) 'starttype: initial'
+       if(masterproc) write(ndso,*) 'starttype: initial'
     else if (trim(starttype) == trim('continue') ) then
        runtype = "continue"
-       write(ndso,*) 'starttype: continue'
+       if(masterproc) write(ndso,*) 'starttype: continue'
     else if (trim(starttype) == trim('branch')) then
        runtype = "branch"
-       write(ndso,*) 'starttype: branch'
+       if(masterproc) write(ndso,*) 'starttype: branch'
     end if
-
-    if ( iaproc == napout) then
+    
+    if (masterproc) then
        write(ndso,*) trim(subname),' inst_name   = ',trim(inst_name)
        write(ndso,*) trim(subname),' inst_index  = ',inst_index
        write(ndso,*) trim(subname),' inst_suffix = ',trim(inst_suffix)
@@ -563,7 +562,7 @@ contains
     ! TIME0 = from ESMF clock
     ! NOTE - are not setting TIMEN here
 
-    if ( iaproc == napout ) write (ndso,930)
+    if ( masterproc ) write (ndso,930)
     call shr_sys_flush(ndso)
 
     ! Initial run or restart run
@@ -599,7 +598,7 @@ contains
     timen(2) = hh*10000 + mm*100 + ss
 
     call stme21 ( time0 , dtme21 )
-    if ( iaproc .eq. napout ) write (ndso,931) dtme21
+    if ( masterproc ) write (ndso,931) dtme21
     call shr_sys_flush(ndso)
     time = time0
 
@@ -608,7 +607,7 @@ contains
     !--------------------------------------------------------------------
 
     iostyp = 1        ! gridded field
-    write (ndso,940) 'no dedicated output process, any file system '
+    if(masterproc) write (ndso,940) 'no dedicated output process, any file system '
     call shr_sys_flush(ndso)
 
     ! Actually will need a new restart flag - since all of the ODAT
@@ -694,7 +693,7 @@ contains
     flgrd(38) = .false. !  38. Langmuir number (La_SL,Proj)
     flgrd(39) = .false. !  39. Enhancement factor with La_SL,Proj
 
-    if ( iaproc .eq. napout ) then
+    if ( masterproc ) then
        flt = .true.
        do i=1, nogrd
           if ( flgrd(i) ) then
@@ -721,12 +720,12 @@ contains
     ! For a continue run - the initfile vluae is created from the time(1:2)
     ! array set below
 
-    if ( iaproc .eq. napout ) write (ndso,950)
-    if ( iaproc .eq. napout ) write (ndso,951) 'wave model ...'
+    if ( masterproc ) write (ndso,950)
+    if ( masterproc ) write (ndso,951) 'wave model ...'
     call shr_sys_flush(ndso)
 
     ! Read namelist (set initfile in w3cesmmd)
-    if ( iaproc .eq. napout ) then
+    if ( masterproc ) then
        write(ndso,*) 'Read in ww3_inparm namelist from wav_in'//trim(inst_suffix)
        open(newunit=unitn, file='wav_in'//trim(inst_suffix), status='old')
        call shr_nl_find_group_name(unitn, 'ww3_inparm', status=ierr)
