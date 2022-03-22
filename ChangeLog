@@ -2,6 +2,16 @@
 ww3 ChangeLog
 ================================================================================
 Originator: altuntas
+Date: 22 Mar 2021
+Model: ww3
+Version: ww3_220322
+One-line summary: cleanup and reduce messages to stdout (jedwards)
+
+M		src/cpl_nuopc/wav_comp_nuopc.F90
+M		src/source/w3initmd.F90
+
+================================================================================
+Originator: altuntas
 Date: 03 Aug 2021
 Model: ww3
 Version: ww3_210803
