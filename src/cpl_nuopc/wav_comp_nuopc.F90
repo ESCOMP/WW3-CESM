@@ -213,6 +213,7 @@ module wav_comp_nuopc
   integer                 :: flds_scalar_index_nx = 0
   integer                 :: flds_scalar_index_ny = 0
   integer                 :: flds_scalar_index_precip_factor = 0._r8
+  integer                 :: shrlogunit
 
   logical                 :: masterproc 
   integer     , parameter :: debug = 1
@@ -227,7 +228,6 @@ contains
   subroutine SetServices(gcomp, rc)
     type(ESMF_GridComp)  :: gcomp
     integer, intent(out) :: rc
-
     character(len=*),parameter  :: subname=trim(modName)//':(SetServices) '
 
     rc = ESMF_SUCCESS
@@ -304,6 +304,8 @@ contains
     integer, intent(out) :: rc
 
     ! local variables
+    type(ESMF_VM) :: vm
+    integer :: iam
     character(len=CL) :: logmsg
     logical           :: isPresent, isSet
     character(len=CL) :: cvalue
@@ -363,6 +365,21 @@ contains
     call advertise_fields(importState, exportState, flds_scalar_name, rc)
     if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
+    call ESMF_GridCompGet(gcomp, vm=vm, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
+    call ESMF_VMGet(vm, localPet=iam, rc=rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
+    if (iam == 0) then
+       masterproc = .true.
+    else
+       masterproc = .false.
+    end if
+
+    call set_component_logging(gcomp, masterproc, stdout, shrlogunit, rc)
+    if (ChkErr(rc,__LINE__,u_FILE_u)) return
+
     call ESMF_LogWrite(subname//' done', ESMF_LOGMSG_INFO)
 
   end subroutine InitializeAdvertise
@@ -387,7 +404,6 @@ contains
     type(ESMF_Time)                :: ETime
     type(ESMF_TimeInterval)        :: TimeStep
     character(CL)                  :: cvalue
-    integer                        :: shrlogunit
     integer                        :: yy,mm,dd,hh,ss
     integer                        :: dtime_sync        ! integer timestep size
     integer                        :: start_ymd         ! start date (yyyymmdd)
@@ -486,15 +502,6 @@ contains
 
     napout = 1
     naperr = 1
-
-    if (iaproc == napout) then
-       masterproc = .true.
-    else
-       masterproc = .false.
-    end if
-
-    call set_component_logging(gcomp, masterproc, stdout, shrlogunit, rc)
-    if (ChkErr(rc,__LINE__,u_FILE_u)) return
 
     nds( 1) = stdout
     nds( 2) = stdout
